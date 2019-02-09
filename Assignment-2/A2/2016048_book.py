@@ -7,6 +7,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from math import exp, pi, sqrt, log
+import ast
+from sklearn.metrics import confusion_matrix
+import itertools
 
 
 def ReadData(filename):
@@ -32,10 +35,35 @@ def ReadData(filename):
     Brr = np.asarray(Brr)
     return Arr, Brr
 
+def ConfusionMatrix(actual, predicted):
+    classes = np.array(['class 1', 'class 2'])
+    cnf_matrix = confusion_matrix(actual, predicted)
+    np.set_printoptions(precision=2)
+    plt.figure()
+    plt.imshow(cnf_matrix, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.title("Confusion Matrix")
+    plt.colorbar()
+    tick_marks = np.arange(len(classes))
+    plt.xticks(tick_marks, classes, rotation=45)
+    plt.yticks(tick_marks, classes)
+
+    fmt = 'd'
+    thresh = cnf_matrix.max() / 2.
+    for i, j in itertools.product(range(cnf_matrix.shape[0]), range(cnf_matrix.shape[1])):
+        plt.text(j, i, format(cnf_matrix[i, j], fmt),
+                horizontalalignment="center",
+                color="white" if cnf_matrix[i, j] > thresh else "black")
+
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    plt.tight_layout()
+    plt.savefig("cnf_matrix.png")
+
 #%%
 TrainX ,TrainY = ReadData('bookData.txt')
 print(TrainX.shape)
 print(TrainY.shape)
+# print(TrainY)
 
 def Mean(trainx):
     arr = np.zeros((2, 3), dtype=float)
@@ -43,11 +71,11 @@ def Mean(trainx):
         count = i*10
         sum = [0, 0, 0]
         for j in range(0, 10):
-            print("I+J" ,count+j)
+            # print("I+J" ,count+j)
             sum[0] += trainx[count+j, 0]
             sum[1] += trainx[count+j, 1]
             sum[2] += trainx[count+j, 2]
-
+            print(trainx[count+j, 0])
         sum[0] /= 10
         sum[1] /= 10
         sum[2] /= 10
@@ -77,12 +105,12 @@ def Variance(trainx, mean):
         for j in range(0, 10):
             # print("c", count+j)
             sum[0] += ((trainx[count+j ,0]-mean[i, 0])**2)
-            sum[1] += ((trainx[count+j, 2]-mean[i, 1])**2)
-            sum[2] += ((trainx[count+j ,1]-mean[i, 2])**2)
+            sum[1] += ((trainx[count+j, 1]-mean[i, 1])**2)
+            sum[2] += ((trainx[count+j ,2]-mean[i, 2])**2)
 
-        sum[0] /= 10
-        sum[1] /= 10
-        sum[2] /= 10
+        sum[0] = sum[0]/10
+        sum[1] = sum[1]/10
+        sum[2] = sum[2]/10
         arr[i, 0] = sum[0]
         arr[i, 1] = sum[1]
         arr[i, 2] = sum[2]
@@ -105,6 +133,8 @@ def lh(x, mean, variance):
 
 def Testing(trainx, label, mean, variance):
     Correct = 0
+    predL = np.zeros((label.shape[0], ), dtype=int)
+    print(mean)
     for i in range(20):
         x = trainx[i, 0]
         m = mean[0, 0]
@@ -116,16 +146,20 @@ def Testing(trainx, label, mean, variance):
         prob2 = lh(x, m, var)*0.5
         print(prob1, prob2, label[i])
         if prob1 > prob2:
+            predL[i] = 1
             if label[i] == 1:
                 Correct += 1
         else:
+            predL[i] = 2
             if label[i] == 2:
                 Correct += 1
     print("EE", (20-Correct)*100/20)
-    return (Correct/20)*100
+    print((Correct/20)*100)
+    return predL
 
-acc = Testing(TrainX, TrainY, meanData, varianceData)
-print("Acc:", acc)
+predL = Testing(TrainX, TrainY, meanData, varianceData)
+# print("Acc:", acc)
+ConfusionMatrix(TrainY, predL)
 
 
 # Bhattacharyya Bound
@@ -148,7 +182,7 @@ def llmd(x, m, cm):
     # print("sub", sub)
     num = exp((-1/2)*(np.matmul(np.matmul(sub, np.linalg.inv(cm)), np.transpose(sub))))
     # print("numnum", num)
-    den = 2*pi*abs(np.linalg.det(cm))
+    den = 2*pi*sqrt(np.linalg.det(cm))
     return num/den
 
 def findCovMat(trainx, mean):
@@ -179,6 +213,7 @@ u2 = np.array([meanData[1, 0], meanData[1, 1]])
 
 def Test2Points(trainx, labels, cov, cov2, u1, u2):
     Correct = 0
+    PredictL = np.zeros((labels.shape[0], ), dtype=int)
     for i in range(20):
         xy = np.array([trainx[i, 0], trainx[i, 1]])
         prob1 = llmd(xy, u1, cov)*0.5
@@ -186,16 +221,21 @@ def Test2Points(trainx, labels, cov, cov2, u1, u2):
         print(prob1, prob2)
         # return None
         if prob1 > prob2:
+            PredictL[i] = 1
             if labels[i] == 1:
                 Correct += 1
         else:
+            PredictL[i] = 2
             if labels[i] == 2:
                 Correct += 1
     print("EE", (20-Correct)*100/20)
-    return (Correct*100/20)
+    print(Correct*100/20)
+    return PredictL
 
-result = Test2Points(TrainX, TrainY, cov, cov2, u1, u2)
-print(result)
+predL = Test2Points(TrainX, TrainY, cov, cov2, u1, u2)
+print(predL)
+
+ConfusionMatrix(TrainY, predL)
 
 #%%
 # Bhattacharyya bound
@@ -217,9 +257,9 @@ print(bound)
 # For all 3 features x1, x2, x3
 
 def llmd(x, m, cm):
-    sub = np.subtract(x, m)
+    sub = x-m
     num = exp((-1/2)*(np.matmul(np.matmul(sub, np.linalg.inv(cm)), np.transpose(sub))))
-    den = ((2*pi)**(3/2))*abs(np.linalg.det(cm))
+    den = ((2*pi)**(3/2))*sqrt(np.linalg.det(cm))
     return num/den
 
 def findCovMat(trainx, mean):
@@ -267,6 +307,7 @@ u2 = np.array([meanData[1, 0], meanData[1, 1], meanData[1, 2]])
 
 def Test3Points(trainx, labels, cov, cov2, u1, u2):
     Correct = 0
+    predL = np.zeros((TrainY.shape[0], ), dtype=int)
     for i in range(20):
         xy = np.array([trainx[i, 0], trainx[i, 1], trainx[i, 2]])
         prob1 = llmd(xy, u1, cov)*0.5
@@ -274,16 +315,21 @@ def Test3Points(trainx, labels, cov, cov2, u1, u2):
         print(prob1, prob2)
         # return None
         if prob1 > prob2:
+            predL[i] = 1
             if labels[i] == 1:
                 Correct += 1
         else:
+            predL[i] = 2
             if labels[i] == 2:
                 Correct += 1
     print("EE", (20-Correct)*100/20)
-    return (Correct*100/20)
+    print((Correct*100/20))
+    return predL
 
-result = Test3Points(TrainX, TrainY, cov, cov2, u1, u2)
-print(result)
+predL = Test3Points(TrainX, TrainY, cov, cov2, u1, u2)
+# print(predL)
+
+ConfusionMatrix(TrainY, predL)
 
 #%%
 # Bhattacharyya bound
