@@ -26,7 +26,7 @@ Y_Test = np.load("Q2_Data\Y_Test.npy")
 GaussianClassifier(X_Train, Y_Train, X_Test, Y_Test)
 # Boosting ----------------------------------------------------------
 
-AdaBoost(700, X_Train, Y_Train, X_Test, Y_Test)
+AdaBoost(170, X_Train, Y_Train, X_Test, Y_Test)
 
 # Bagging ----------------------------------------------------------
 

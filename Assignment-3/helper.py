@@ -9,6 +9,7 @@ from math import ceil
 from random import randint as randi
 from sklearn.tree import DecisionTreeClassifier
 import csv
+import matplotlib.pyplot as plt
 
 def ReadData1():
     imageList = []
@@ -258,13 +259,15 @@ def NFold(N, x_train, y_train, x_test, y_test):
 def getAlpha(error):
     # res = 0.5 * np.log((1-error)/error) + np.log(25)
     res = np.log((1-error)/error) + np.log(25)
-    return abs(res)
+    return res
 
 def AdaBoost(n, x_train, y_train, x_test, y_test):
     w = np.ones(x_train.shape[0], dtype=np.float) / x_train.shape[0]
     clf = DecisionTreeClassifier(max_depth=2, max_leaf_nodes=5)
     TrainPredicted = np.zeros((x_train.shape[0], 26), dtype=np.float64)
     TestPredicted = np.zeros((x_test.shape[0], 26), dtype=np.float64)
+    ErrorListTrain = []
+    ErrorListTest = []
 
     for i in range(n):
         # print("Weights", w)
@@ -273,17 +276,21 @@ def AdaBoost(n, x_train, y_train, x_test, y_test):
         Train_Probs = clf.predict_proba(x_train)
         predicted_test = clf.predict(x_test)
         Test_Probs = clf.predict_proba(x_test)
-        # print(Train_Probs)
-        # print(Train_Probs.shape)
+
 
         miss = []
         error = 0
+        error2 = 0
         for j in range(x_train.shape[0]):
             if (predicted_train[j] != y_train[j]):
                 error += w[j]
                 miss.append(1)
             else:
                 miss.append(0)
+
+        for j in range(x_test.shape[0]):
+            if (predicted_test[j] != y_test[j]):
+                error2 += w[j]
 
         error /= np.sum(w)
         if (error == 0):
@@ -293,6 +300,7 @@ def AdaBoost(n, x_train, y_train, x_test, y_test):
             print(error, i)
             break
         # print("Error:", error)
+
         alpha = getAlpha(error)
         # print("alpha:", alpha)
         for j in range(len(miss)):
@@ -302,31 +310,39 @@ def AdaBoost(n, x_train, y_train, x_test, y_test):
         
         TrainPredicted += alpha * Train_Probs
         TestPredicted += alpha * Test_Probs
-        # for x in range(TrainPredicted.shape[0]):
-        #     for y in range(TrainPredicted.shape[1]):
-        #         TrainPredicted[x, y] += alpha * Train_Probs[x, y]
-        
-        # for x in range(TestPredicted.shape[0]):
-        #     for y inl range(TestPredicted.shape[1]):
-        #         TestPredicted[x, y] += alpha * Test_Probs[x, y]
 
-    correct_train = 0
-    correct_test = 0
-    # TrainPredictedClass = np.zeros(TrainPredicted.shape[0], dtype=np.int)
-    # TestPredictedClass = np.zeros(TestPredicted.shape[0], dtype=np.int)
-    for i in range(TrainPredicted.shape[0]):
-        max_value = np.argmax(TrainPredicted[i, :])
-        # print(max_value, y_train[i])
-        if (max_value == y_train[i]):
-            correct_train += 1
-        # TrainPredictedClass[i] = max_value
+        predicted_labels_train = np.argmax(TrainPredicted, axis=1)
+        predicted_labels_test = np.argmax(TestPredicted, axis=1)
+        Acc1, err1 = GetResults(predicted_labels_train, y_train)
+        Acc2, err2 = GetResults(predicted_labels_test, y_test)
+        ErrorListTrain.append(err1)
+        ErrorListTest.append(err2)
 
-    for i in range(TestPredicted.shape[0]):
-        max_value = np.argmax(TestPredicted[i, :])
-        if (max_value == y_test[i]):
-            correct_test += 1
-        # TestPredicted[i] = max_value
-    print(correct_train, correct_test)
-    print("[AdaBoost Train] Accuracy:", correct_train*100/ x_train.shape[0])
-    print("[AdaBoost Test] Accuracy:", correct_test*100/ x_test.shape[0])
+    predicted_labels_train = np.argmax(TrainPredicted, axis=1)
+    predicted_labels_test = np.argmax(TestPredicted, axis=1)
+    Acc1, err1 = GetResults(predicted_labels_train, y_train)
+    Acc2, err2 = GetResults(predicted_labels_test, y_test)
     
+    plotError(ErrorListTrain, np.arange(len(ErrorListTrain)), ErrorListTest)
+    print("[AdaBoost Train] Accuracy:", Acc1)
+    print("[AdaBoost Test] Accuracy:", Acc2)
+
+def plotError(x_train, y, x_test):
+    plt.figure()
+    plt.plot(y, x_train, label="Training Error Curve")
+    plt.plot(y, x_test, label="Testing Error Curve")
+    plt.ylabel("Error Rate")
+    plt.xlabel("Iterations")
+    plt.title("Error Rate vs Iterations")
+    plt.legend(loc='upper right')
+    plt.savefig("Q2_Data/AdaBoost_ErrorCurve.png")
+
+def GetResults(PredictedLabels, ActualLabels):
+    correct = 0
+    error = 0
+    for i in range(PredictedLabels.shape[0]):
+        if (PredictedLabels[i] == ActualLabels[i]):
+            correct += 1
+        else:
+            error += 1
+    return correct*100/PredictedLabels.shape[0], error/PredictedLabels.shape[0]
