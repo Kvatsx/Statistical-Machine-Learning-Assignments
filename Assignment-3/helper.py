@@ -7,6 +7,8 @@ from numpy import linalg as la
 from sklearn.naive_bayes import GaussianNB
 from math import ceil
 from random import randint as randi
+from sklearn.tree import DecisionTreeClassifier
+import csv
 
 def ReadData1():
     imageList = []
@@ -25,11 +27,26 @@ def ReadData1():
     imageLabels = np.asarray(imageLabels)
     return imageList, imageLabels
 
-def SplitData(X_Data, Y_Data):
+def ReadDataQ2():
+    data = []
+    label = []
+    with open('Q2_dataset/letter-recognition.data', 'r') as file:
+        reader = csv.reader(file)
+        for line in reader:
+            # print(type(line[0]), ord(line[0]))
+            label.append(ord(line.pop(0))-65)
+            line = np.asarray(line)
+            data.append(line)
+    label = np.asarray(label)
+    data = np.asarray(data, dtype=np.float64)
+    file.close()
+    return data, label
+
+def SplitData(X_Data, Y_Data, amount):
     DataSize = X_Data.shape[0]
-    Testing_Size = ceil(DataSize * 70/100)
+    Testing_Size = ceil(DataSize * amount/100)
     DataSlot = []
-    print (Testing_Size, DataSize)
+    # print (Testing_Size, DataSize)
     for i in range(DataSize):
         DataSlot.append(i)
     TrainingData = []
@@ -49,6 +66,7 @@ def SplitData(X_Data, Y_Data):
         index = DataSlot.pop()
         TestingData.append(X_Data[index])
         TestingLabels.append(Y_Data[index])
+    print("NewSizes:", len(TrainingData), len(TestingData))
     return np.asarray(TrainingData), np.asarray(TrainingLabel), np.asarray(TestingData), np.asarray(TestingLabels)
 
 def GaussianClassifier(x_train, y_train, x_test, y_test):
@@ -71,6 +89,8 @@ def GaussianClassifier(x_train, y_train, x_test, y_test):
             count2 += 1
     print("Accuracy[Test]:", (count2/len(y_test))*100) 
 
+    return (count2/len(y_test))*100
+
 def PCA(x_data, x_test, ee):
     # Data Normalization
     x_data = NormalizeData(x_data)
@@ -90,7 +110,7 @@ def PCA(x_data, x_test, ee):
     return x_data, x_test
 
 def NormalizeData(data):
-    mean = np.mean(data, axis=0)
+    mean = np.mean(data, axis=0, keepdims=True)
     # print(mean)
     new_data = data - mean
     return new_data
@@ -98,7 +118,7 @@ def NormalizeData(data):
 
 def EigenValueDecomposition(data):
     CovarienceMatrix = np.cov(data.T)
-    CovarienceMatrix = CovarienceMatrix/(data.shape[0]-1)
+    # CovarienceMatrix = CovarienceMatrix/(data.shape[0]-1)
     EigenValues, EigenVector = la.eig(CovarienceMatrix)
     EigenValues = np.abs(EigenValues)
     EigenVector = np.real(EigenVector)
@@ -142,18 +162,20 @@ def LDA(x_data, y_data, x_test):
     Sw = WithinClassScatter(x_data, y_data, [1, 12])
 
     M = np.matmul(la.inv(Sw), Sb)
-    CovarienceMatrix = np.cov(M.T)
-    EigenValues, EigenVector = la.eig(CovarienceMatrix)
-    eigen_pair = []
-    for i in range(len(EigenValues)):
-        eigen_pair.append((np.abs(EigenValues[i]), EigenVector[:, i]))
-    eigen_pair.sort(key=lambda k: k[0], reverse=True)
+    # CovarienceMatrix = np.cov(M.T)
+    EigenValues, EigenVector = la.eig(M)
+    EigenValues = np.abs(EigenValues)
+    EigenVector = np.real(EigenVector)
+    # eigen_pair = []
+    # for i in range(len(EigenValues)):
+    #     eigen_pair.append((EigenValues[i], EigenVector[:, i]))
+    # eigen_pair.sort(key=lambda k: k[0], reverse=True)
     
-    W = []
-    for i in range(len(eigen_pair)):
-        W.append(np.real(eigen_pair[i][1]))
-
-    W = np.asarray(W)
+    # W = []
+    # for i in range(len(eigen_pair)):
+    #     W.append(eigen_pair[i][1])
+    W = EigenVector
+    # W = np.asarray(W)
     print("Original Shape:", x_data.shape)
     x_data = ProjectedData(x_data, W)
     print("Projected Shape:", x_data.shape)
@@ -174,6 +196,7 @@ def BetweenClassScatter(x_data, y_data, classRange):
     for i in range(classRange[0], classRange[1]):
         NewData = GetClassData(x_data, y_data, i)
         MeanData = np.mean(NewData, axis=0)
+        # print(str(i), MeanData)
         result = MeanData - mean_value
         result = np.reshape(result, (result.shape[0], 1))
         # print(result)
@@ -201,5 +224,109 @@ def WithinClassScatter(x_data, y_data, classRange):
     return finalMatrix
 
 
-# def FiveFoldCrossValidation(x_train, y_train, x_test, y_test):
+def NFold(N, x_train, y_train, x_test, y_test):
+    indexArr = np.arange(x_train.shape[0])
+    np.random.shuffle(indexArr)
+    # print(indexArr)
+    AllBins = []
+    Bin = []
+    LabelBin = []
+    AllLabelBins = []
+    count = 0
+    tempindex = 0
+    i = 0
+    while(i < x_train.shape[0]):
+        if (count < x_train.shape[0]//N or tempindex == N-1):
+            Bin.append(x_train[indexArr[i]])
+            LabelBin.append(y_train[indexArr[i]])
+            count += 1
+        else:
+            count = 0
+            tempindex += 1
+            AllBins.append(np.asarray(Bin))
+            AllLabelBins.append(np.asarray(LabelBin))
+            Bin = []
+            LabelBin = []
+            i -= 1
+        i += 1
+    AllBins.append(np.asarray(Bin))
+    AllLabelBins.append(np.asarray(LabelBin))
 
+    return AllBins, AllLabelBins
+
+
+def getAlpha(error):
+    # res = 0.5 * np.log((1-error)/error) + np.log(25)
+    res = np.log((1-error)/error) + np.log(25)
+    return abs(res)
+
+def AdaBoost(n, x_train, y_train, x_test, y_test):
+    w = np.ones(x_train.shape[0], dtype=np.float) / x_train.shape[0]
+    clf = DecisionTreeClassifier(max_depth=2, max_leaf_nodes=5)
+    TrainPredicted = np.zeros((x_train.shape[0], 26), dtype=np.float64)
+    TestPredicted = np.zeros((x_test.shape[0], 26), dtype=np.float64)
+
+    for i in range(n):
+        # print("Weights", w)
+        clf.fit(x_train, y_train, sample_weight=w)
+        predicted_train = clf.predict(x_train)
+        Train_Probs = clf.predict_proba(x_train)
+        predicted_test = clf.predict(x_test)
+        Test_Probs = clf.predict_proba(x_test)
+        # print(Train_Probs)
+        # print(Train_Probs.shape)
+
+        miss = []
+        error = 0
+        for j in range(x_train.shape[0]):
+            if (predicted_train[j] != y_train[j]):
+                error += w[j]
+                miss.append(1)
+            else:
+                miss.append(0)
+
+        error /= np.sum(w)
+        if (error == 0):
+            print(w)
+            print(predicted_train)
+            print(y_train)
+            print(error, i)
+            break
+        # print("Error:", error)
+        alpha = getAlpha(error)
+        # print("alpha:", alpha)
+        for j in range(len(miss)):
+            w[j] = w[j] * np.exp(miss[j]*alpha)
+
+        w /= np.sum(w)
+        
+        TrainPredicted += alpha * Train_Probs
+        TestPredicted += alpha * Test_Probs
+        # for x in range(TrainPredicted.shape[0]):
+        #     for y in range(TrainPredicted.shape[1]):
+        #         TrainPredicted[x, y] += alpha * Train_Probs[x, y]
+        
+        # for x in range(TestPredicted.shape[0]):
+        #     for y inl range(TestPredicted.shape[1]):
+        #         TestPredicted[x, y] += alpha * Test_Probs[x, y]
+
+    correct_train = 0
+    correct_test = 0
+    # TrainPredictedClass = np.zeros(TrainPredicted.shape[0], dtype=np.int)
+    # TestPredictedClass = np.zeros(TestPredicted.shape[0], dtype=np.int)
+    for i in range(TrainPredicted.shape[0]):
+        max_value = np.argmax(TrainPredicted[i, :])
+        # print(max_value, y_train[i])
+        if (max_value == y_train[i]):
+            correct_train += 1
+        # TrainPredictedClass[i] = max_value
+
+    for i in range(TestPredicted.shape[0]):
+        max_value = np.argmax(TestPredicted[i, :])
+        if (max_value == y_test[i]):
+            correct_test += 1
+        # TestPredicted[i] = max_value
+    print(correct_train, correct_test)
+    print("[AdaBoost Train] Accuracy:", correct_train*100/ x_train.shape[0])
+    print("[AdaBoost Test] Accuracy:", correct_test*100/ x_test.shape[0])
+    
