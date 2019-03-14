@@ -5,7 +5,7 @@ import numpy as np
 from numpy import linalg as la
 from helper import *
 import math
-# In[]
+
 # Reading Data ----------------------------------------------------------
        
 # Data, Labels = ReadDataQ2()
@@ -23,11 +23,11 @@ Y_Train = np.load("Q2_Data\Y_Train.npy")
 X_Test = np.load("Q2_Data\X_Test.npy")
 Y_Test = np.load("Q2_Data\Y_Test.npy")
 
-GaussianClassifier(X_Train, Y_Train, X_Test, Y_Test)
-# Boosting ----------------------------------------------------------
+DTClassifier(X_Train, Y_Train, X_Test, Y_Test)
 
-AdaBoost(170, X_Train, Y_Train, X_Test, Y_Test)
+# Boosting ----------------------------------------------------------
+# AdaBoost(180, X_Train, Y_Train, X_Test, Y_Test)
 
 # Bagging ----------------------------------------------------------
+Bagging(5, X_Train, Y_Train, X_Test, Y_Test)
 
-# Boosting()

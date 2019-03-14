@@ -92,6 +92,28 @@ def GaussianClassifier(x_train, y_train, x_test, y_test):
 
     return (count2/len(y_test))*100
 
+def DTClassifier(x_train, y_train, x_test, y_test):
+    clf = DecisionTreeClassifier(max_depth=2, max_leaf_nodes=5)
+    clf.fit(x_train, y_train)
+
+    Predicted = clf.predict(x_train)
+    count1 = 0
+    print(Predicted.shape)
+    for i in range(len(y_train)):
+        if (y_train[i] == Predicted[i]):
+            count1 += 1
+    print("Accuracy[Train]:", (count1/len(y_train))*100)
+
+    Predicted = clf.predict(x_test)
+    count2 = 0
+    # print(Predicted.shape)
+    for i in range(len(y_test)):
+        if (y_test[i] == Predicted[i]):
+            count2 += 1
+    print("Accuracy[Test]:", (count2/len(y_test))*100) 
+
+    return (count2/len(y_test))*100
+
 def PCA(x_data, x_test, ee):
     # Data Normalization
     x_data = NormalizeData(x_data)
@@ -162,7 +184,7 @@ def LDA(x_data, y_data, x_test):
     Sb = BetweenClassScatter(x_data, y_data, [1, 12])
     Sw = WithinClassScatter(x_data, y_data, [1, 12])
 
-    M = np.matmul(la.inv(Sw), Sb)
+    M = np.matmul(la.pinv(Sw), Sb)
     # CovarienceMatrix = np.cov(M.T)
     EigenValues, EigenVector = la.eig(M)
     EigenValues = np.abs(EigenValues)
@@ -193,26 +215,27 @@ def GetClassData(x_data, y_data, w):
 
 def BetweenClassScatter(x_data, y_data, classRange):
     mean_value = np.mean(x_data, axis=0)
-    finalMatrix = 0
+    finalMatrix = np.zeros((x_data.shape[1], x_data.shape[1]))
     for i in range(classRange[0], classRange[1]):
         NewData = GetClassData(x_data, y_data, i)
         MeanData = np.mean(NewData, axis=0)
         # print(str(i), MeanData)
         result = MeanData - mean_value
         result = np.reshape(result, (result.shape[0], 1))
-        # print(result)
-        # print("result:", result.shape)
-        result = np.matmul(result, result.T)
+        # result = np.reshape(result, (1, result.shape[0]))
         # print(result)
         # print("result:", result.shape)
         result = result * NewData.shape[0]
+        result = np.matmul(result, result.T)
+        # print(result)
+        # print("result:", result.shape)
         finalMatrix += result
     print("Sb:", finalMatrix.shape)
     # print(finalMatrix)
     return finalMatrix
 
 def WithinClassScatter(x_data, y_data, classRange):
-    finalMatrix = 0
+    finalMatrix = np.zeros((x_data.shape[1], x_data.shape[1]))
     for i in range(classRange[0], classRange[1]):
         NewData = GetClassData(x_data, y_data, i)
         # print("NewData, Sw:", NewData.shape)
@@ -280,17 +303,12 @@ def AdaBoost(n, x_train, y_train, x_test, y_test):
 
         miss = []
         error = 0
-        error2 = 0
         for j in range(x_train.shape[0]):
             if (predicted_train[j] != y_train[j]):
                 error += w[j]
                 miss.append(1)
             else:
                 miss.append(0)
-
-        for j in range(x_test.shape[0]):
-            if (predicted_test[j] != y_test[j]):
-                error2 += w[j]
 
         error /= np.sum(w)
         if (error == 0):
@@ -346,3 +364,78 @@ def GetResults(PredictedLabels, ActualLabels):
         else:
             error += 1
     return correct*100/PredictedLabels.shape[0], error/PredictedLabels.shape[0]
+
+def Bagging(n, x_train, y_train, x_test, y_test):
+    # print(x_train.shape)
+    # DataMemory = []
+    BagsX = []
+    BagsY = []
+    BagSize = x_train.shape[0]
+    for i in range(n):
+        # SmallDataMemory = []
+        SmallBagX = []
+        SmallBagY = []
+        for j in range(BagSize):
+            index = randi(0, x_train.shape[0]-1)
+            # SmallDataMemory.append(index)
+            SmallBagX.append(x_train[index])
+            SmallBagY.append(y_train[index])
+        # DataMemory.append(SmallDataMemory)
+        SmallBagX = np.asarray(SmallBagX)
+        SmallBagY = np.asarray(SmallBagY)
+        BagsX.append(SmallBagX)
+        BagsY.append(SmallBagY)
+    BagsX = np.asarray(BagsX)
+    BagsY = np.asarray(BagsY)   
+    # print(BagsX.shape) 
+
+    # TrainPredicted = np.zeros((x_train.shape[0], 26), dtype=np.int)
+    TestPredicted = np.zeros((x_test.shape[0], 26), dtype=np.int)
+    # ErrorListTrain = []
+    # ErrorListTest = []
+    clf = DecisionTreeClassifier(max_depth=2, max_leaf_nodes=5)
+    for i in range(n):
+        # print(BagsX[i])
+        # print("Bag"+str(i))
+        # print(BagsX[i].shape)
+        # print(BagsY[i].shape)
+        clf.fit(BagsX[i], BagsY[i])
+
+        # Pred_Train = clf.predict(BagsX[i])
+        # Acc_train = clf.score(BagsX[i], BagsY[i])
+        # Train_Probs = clf.predict_proba(BagsX[i])
+
+        Pred_Test = clf.predict(x_test)
+        # Acc_test = clf.score(x_test, y_test)
+        # Test_Probs = clf.predict_proba(x_test)
+
+        # TrainPredicted += Train_Probs
+        # TestPredicted += Test_Probs
+
+        # print("[Bagging Train] Accuracy:" + str(i), Acc_train)
+        # print("[Bagging Test] Accuracy:" + str(i), Acc_test)
+        # for k in range(len(DataMemory[i])):
+        #     # for j in range(Pred_Train.shape[0]):
+        #     index = DataMemory[i][k]
+        #     TrainPredicted[index, Pred_Train[k]] += 1
+        
+        for j in range(x_test.shape[0]):
+            TestPredicted[j, Pred_Test[j]] += 1
+
+        # predicted_labels_train = np.argmax(TrainPredicted, axis=1)
+        # predicted_labels_test = np.argmax(TestPredicted, axis=1)
+        # Acc1, err1 = GetResults(predicted_labels_train, y_train)
+        # Acc2, err2 = GetResults(predicted_labels_test, y_test)
+        # ErrorListTrain.append(err1)
+        # ErrorListTest.append(err2)
+        # break
+    # print(TestPredicted)
+    # predicted_labels_train = np.argmax(TrainPredicted, axis=1)
+    predicted_labels_test = np.argmax(TestPredicted, axis=1)
+    # print(predicted_labels_test.shape)
+    # Acc1, err1 = GetResults(predicted_labels_train, y_train)
+    Acc2, err2 = GetResults(predicted_labels_test, y_test)
+    # print("[Bagging Train] Accuracy:", Acc1)
+    print("[Bagging Test] Accuracy:", Acc2)
+
+

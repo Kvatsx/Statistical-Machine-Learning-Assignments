@@ -7,11 +7,11 @@ from helper import *
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 # In[] ----------------------------------------
-X_Data, Y_Data = ReadData1()
+# X_Data, Y_Data = ReadData1()
 
 # print("Data:", X_Data.shape, Y_Data.shape)
 # # print(X_Data)
-X_Train, Y_Train, X_Test, Y_Test = SplitData(X_Data, Y_Data, 70)
+# X_Train, Y_Train, X_Test, Y_Test = SplitData(X_Data, Y_Data, 70)
 # GaussianClassifier(X_Train, Y_Train, X_Test, Y_Test)
 
 # X_Train, Y_Train, X_Test, Y_Test = SplitData(X2_Data, Y_Data, 70)
@@ -23,19 +23,19 @@ X_Train, Y_Train, X_Test, Y_Test = SplitData(X_Data, Y_Data, 70)
 
 # In[]
 # Load Data ----------------------------------------------
-# X_Train = np.load("Q1_Data\X_Train.npy")
-# Y_Train = np.load("Q1_Data\Y_Train.npy")
-# X_Test = np.load("Q1_Data\X_Test.npy")
-# Y_Test = np.load("Q1_Data\Y_Test.npy")
+X_Train = np.load("Q1_Data\X_Train.npy")
+Y_Train = np.load("Q1_Data\Y_Train.npy")
+X_Test = np.load("Q1_Data\X_Test.npy")
+Y_Test = np.load("Q1_Data\Y_Test.npy")
 
 print("Original Data:", X_Train.shape, X_Test.shape)
 
 GaussianClassifier(X_Train, Y_Train, X_Test, Y_Test)
 
 # # PCA ---------------------------------------------------
-X2_Train, X2_Test = PCA(X_Train, X_Test, 95)
-print("[PCA] Projected Data", X2_Train.shape, X2_Test.shape)
-GaussianClassifier(X2_Train, Y_Train, X2_Test, Y_Test)
+# X2_Train, X2_Test = PCA(X_Train, X_Test, 95)
+# print("[PCA] Projected Data", X2_Train.shape, X2_Test.shape)
+# GaussianClassifier(X2_Train, Y_Train, X2_Test, Y_Test)
 
 # # LDA ---------------------------------------------------
 X3_Train, X3_Test = LDA(X_Train, Y_Train, X_Test)
@@ -58,7 +58,7 @@ print("Accuracy[Test]:", (count2/len(Y_Test))*100)
 # X_Train_Bins, Y_Train_Bins = NFold(5, X2_Train, Y_Train, X2_Test, Y_Test)
 # X_Train_Bins, Y_Train_Bins = NFold(5, X3_Train, Y_Train, X3_Test, Y_Test)
 
-X_Train_Bins, Y_Train_Bins = NFold(5, X_Train, Y_Train, X_Test, Y_Test)
+# X_Train_Bins, Y_Train_Bins = NFold(5, X_Train, Y_Train, X_Test, Y_Test)
 # print(len(X_Train_Bins[0]))
 def NFoldCrossValidation(x_train_bin, y_train_bin):
     Accuracy = []
