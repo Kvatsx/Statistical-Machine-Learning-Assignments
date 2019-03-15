@@ -11,8 +11,9 @@ from sklearn.tree import DecisionTreeClassifier
 import csv
 import matplotlib.pyplot as plt
 import pickle
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, roc_curve
 import itertools
+from tqdm import tqdm
 
 def ReadData_1Q1():
     imageList = []
@@ -23,7 +24,7 @@ def ReadData_1Q1():
             img = cv2.imread(item, 0)
             img = cv2.resize(img, (50, 50))
             imageList.append(img.flatten())
-            imageLabels.append(i)
+            imageLabels.append(i-1)
         # print(np.array(imageList).shape)
 
     imageList = np.array(imageList)
@@ -37,14 +38,9 @@ def ReadData_2Q1():
     for i in range(1, 6):
         with open(".\\Q1_dataset\\cifar-10-batches-py\\data_batch_" + str(i), 'rb') as fo:
             dict = pickle.load(fo, encoding='bytes')
-            # print(dict)
-            # for key in dict:
-            #     print(key)
-            # print(dict[b'data'].shape)
             data.append(dict[b'data'])
             label.append(dict[b'labels'])
-            
-            # break
+
     for i in range(1, len(data)):
         np.concatenate((data[0], data[i]), axis = 0)
         np.concatenate((label[0], label[i]), axis = 0)
@@ -57,6 +53,12 @@ def ReadData_2Q1():
         test_label.append(dict[b'labels'])
 
     return np.asarray(data[0]), np.asarray(label[0]), np.asarray(test[0]), np.asarray(test_label[0])
+
+def confusion_matr1x(y_test, predicted):
+    ConfusionMatrix = np.zeros((y_test.shape[0], np.unique(y_test)))
+    for i in range(y_test.shape[0]):
+        ConfusionMatrix[y_test[i], predicted[i]] += 1
+    print(ConfusionMatrix)
 
 def ConfusionMatrix(actual, predicted, filename):
         classes = np.unique(predicted)
@@ -82,22 +84,22 @@ def ConfusionMatrix(actual, predicted, filename):
         plt.xlabel('Predicted label')
         plt.tight_layout()
         plt.savefig(filename)
-        plt.show()
-
-def RocCurve(y_test, CalProb, classCount, imagename):
-    roc_values = np.zeros((classCount, 2, y_test.shape[0]))
-    print(np.max(CalProb, axis=1))
-    print(CalProb[0])
-    for i in range(2):
-        Threshold = 1
-        for k in range(100):
+        # plt.show()
+        plt.close()
+     
+def RocNew(y_test, CalProb, classCount, imagename):
+    roc_values = np.zeros((classCount, 2, 1000))
+    for i in range(classCount):
+        threshold = 1
+        for k in range(1000):
             tp = 0
             fn = 0
             fp = 0
             tn = 0
             for j in range(y_test.shape[0]):
                 classify = False
-                if ( CalProb[j, i] > Threshold ):
+                # print()
+                if ( CalProb[j, i] >= threshold ):
                     classify = True
                 if classify and y_test[j] == i:
                     tp += 1
@@ -107,22 +109,31 @@ def RocCurve(y_test, CalProb, classCount, imagename):
                     fn += 1
                 elif classify == False and y_test[j] != i:
                     tn += 1
-            
+            # print(tp, fp, tn, fn)
             roc_values[i, 0, k] = tp/(tp+fn)
             roc_values[i, 1, k] = fp/(tn+fp)
+            threshold *= 0.4
+            # print("TPR:", tp/(tp+fn), "FPR:", fp/(tn+fp))
+        # print(threshold)
+    clas = np.unique(y_test)
+    plot_Roc(roc_values, classCount, imagename, clas)
 
-            Threshold = Threshold - Threshold*0.3
-        # print("K", k)
+def plot_Roc(roc_values, classCount, imagename, clas):
     plt.figure()
-    color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', '#940445', '#42c4d3', '#ff7256']    
+    color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', '#940445', '#42c4d3', '#ff7256', '#8aa0ae']  
     for i in range(classCount):
-        plt.plot(roc_values[i, 1, :], roc_values[i, 0, :], color[i], label="ROC Curve for class %d" %i)
+        # fpr, tpr,  = roc_curve(y_test, CalProb[:, i])
+        # plt.plot(tpr, fpr, color[i], label="ROC Curve for class %d" %i)
+        if i in clas:
+            print(i)
+            plt.plot(roc_values[i, 1, :], roc_values[i, 0, :], color[i], label="ROC Curve for class %d" %i)
     plt.xlabel("False Positive Rate")
     plt.ylabel("True Positive Rate")
     plt.title("ROC Curve")
-    plt.legend(loc='lower right')
+    plt.legend(loc='best')
     plt.savefig(imagename)
-    plt.show()
+    # plt.show()
+    plt.close()
 
 def ReadDataQ2():
     data = []
@@ -166,13 +177,12 @@ def SplitData(X_Data, Y_Data, amount):
     print("NewSizes:", len(TrainingData), len(TestingData))
     return np.asarray(TrainingData), np.asarray(TrainingLabel), np.asarray(TestingData), np.asarray(TestingLabels)
 
-def GaussianClassifier(x_train, y_train, x_test, y_test):
+def GaussianClassifier(x_train, y_train, x_test, y_test, filename0="Q1_Data/cm.png", filename1="Q1_Data/RocCurve.png"):
     print("Gaussian Classifier-------------------------------------")
     clf = GaussianNB()
     clf.fit(x_train, y_train)
 
     Predicted = clf.predict(x_train)
-    CalProb = clf.predict_proba(x_train)
     count1 = 0
     print(Predicted.shape)
     for i in range(len(y_train)):
@@ -182,14 +192,15 @@ def GaussianClassifier(x_train, y_train, x_test, y_test):
     # ConfusionMatrix(y_train, Predicted, "Q1_data/x_train.png")
 
     Predicted = clf.predict(x_test)
+    CalProb = clf.predict_proba(x_test)
     count2 = 0
     # print(Predicted.shape)
     for i in range(len(y_test)):
         if (y_test[i] == Predicted[i]):
             count2 += 1
     print("Accuracy[Test]:", (count2/len(y_test))*100) 
-    # ConfusionMatrix(y_test, Predicted, "Q1_data/x_test.png")
-    # RocCurve(y_test, CalProb, np.unique(y_test).shape[0], "Q1_Data/RocCurve.png")
+    ConfusionMatrix(y_test, Predicted, filename0)
+    RocNew(y_test, CalProb, np.unique(y_test).shape[0], filename1)
     return (count2/len(y_test))*100
 
 def DTClassifier(x_train, y_train, x_test, y_test):
@@ -301,7 +312,7 @@ def LDA(x_data, y_data, x_test, classRange):
     Sb = BetweenClassScatter(x_data, y_data, classRange)
     Sw = WithinClassScatter(x_data, y_data, classRange)
 
-    M = np.matmul(la.pinv(Sw), Sb)
+    M = np.matmul(la.pinv(Sw), Sb.T)
     # CovarienceMatrix = np.cov(M.T)
     EigenValues, EigenVector = la.eig(M)
     EigenValues = np.abs(EigenValues)
@@ -312,9 +323,10 @@ def LDA(x_data, y_data, x_test, classRange):
     eigen_pair.sort(key=lambda k: k[0], reverse=True)
     
     W = []
-    for i in range(len(eigen_pair)):
+    for i in range(10):
         W.append(eigen_pair[i][1])
-    # W = EigenVector
+    # W.append(eigen_pair[i][:])
+    
     W = np.asarray(W)
     print("Original Shape:", x_data.shape)
     x_data = ProjectedData(x_data, W)
@@ -555,4 +567,9 @@ def Bagging(n, x_train, y_train, x_test, y_test):
     # print("[Bagging Train] Accuracy:", Acc1)
     print("[Bagging Test] Accuracy:", Acc2)
 
+
+# def ReconstructImages(eigenFaces):
+
+
+# def VisualizeEigenFaces():
 
