@@ -338,7 +338,7 @@ class MNV:
                 roc_values[i, 0, k] = tp/(tp+fn)
                 roc_values[i, 1, k] = fp/(tn+fp)
 
-                Threshold -= 0.0001
+                Threshold = Threshold - Threshold*0.3
             # print("K", k)
         plt.figure()
         color = ['y', 'g']

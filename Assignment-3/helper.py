@@ -84,7 +84,45 @@ def ConfusionMatrix(actual, predicted, filename):
         plt.savefig(filename)
         plt.show()
 
-# def RocCurve():
+def RocCurve(y_test, CalProb, classCount, imagename):
+    roc_values = np.zeros((classCount, 2, y_test.shape[0]))
+    print(np.max(CalProb, axis=1))
+    print(CalProb[0])
+    for i in range(2):
+        Threshold = 1
+        for k in range(100):
+            tp = 0
+            fn = 0
+            fp = 0
+            tn = 0
+            for j in range(y_test.shape[0]):
+                classify = False
+                if ( CalProb[j, i] > Threshold ):
+                    classify = True
+                if classify and y_test[j] == i:
+                    tp += 1
+                elif classify and y_test[j] != i:
+                    fp += 1
+                elif classify == False and y_test[j] == i:
+                    fn += 1
+                elif classify == False and y_test[j] != i:
+                    tn += 1
+            
+            roc_values[i, 0, k] = tp/(tp+fn)
+            roc_values[i, 1, k] = fp/(tn+fp)
+
+            Threshold = Threshold - Threshold*0.3
+        # print("K", k)
+    plt.figure()
+    color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', '#940445', '#42c4d3', '#ff7256']    
+    for i in range(classCount):
+        plt.plot(roc_values[i, 1, :], roc_values[i, 0, :], color[i], label="ROC Curve for class %d" %i)
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title("ROC Curve")
+    plt.legend(loc='lower right')
+    plt.savefig(imagename)
+    plt.show()
 
 def ReadDataQ2():
     data = []
@@ -134,13 +172,14 @@ def GaussianClassifier(x_train, y_train, x_test, y_test):
     clf.fit(x_train, y_train)
 
     Predicted = clf.predict(x_train)
+    CalProb = clf.predict_proba(x_train)
     count1 = 0
     print(Predicted.shape)
     for i in range(len(y_train)):
         if (y_train[i] == Predicted[i]):
             count1 += 1
     print("Accuracy[Train]:", (count1/len(y_train))*100)
-    ConfusionMatrix(y_train, Predicted, "Q1_data/x_train.png")
+    # ConfusionMatrix(y_train, Predicted, "Q1_data/x_train.png")
 
     Predicted = clf.predict(x_test)
     count2 = 0
@@ -149,7 +188,8 @@ def GaussianClassifier(x_train, y_train, x_test, y_test):
         if (y_test[i] == Predicted[i]):
             count2 += 1
     print("Accuracy[Test]:", (count2/len(y_test))*100) 
-    ConfusionMatrix(y_test, Predicted, "Q1_data/x_test.png")
+    # ConfusionMatrix(y_test, Predicted, "Q1_data/x_test.png")
+    # RocCurve(y_test, CalProb, np.unique(y_test).shape[0], "Q1_Data/RocCurve.png")
     return (count2/len(y_test))*100
 
 def DTClassifier(x_train, y_train, x_test, y_test):
@@ -266,16 +306,16 @@ def LDA(x_data, y_data, x_test, classRange):
     EigenValues, EigenVector = la.eig(M)
     EigenValues = np.abs(EigenValues)
     EigenVector = np.real(EigenVector)
-    # eigen_pair = []
-    # for i in range(len(EigenValues)):
-    #     eigen_pair.append((EigenValues[i], EigenVector[:, i]))
-    # eigen_pair.sort(key=lambda k: k[0], reverse=True)
+    eigen_pair = []
+    for i in range(len(EigenValues)):
+        eigen_pair.append((EigenValues[i], EigenVector[:, i]))
+    eigen_pair.sort(key=lambda k: k[0], reverse=True)
     
-    # W = []
-    # for i in range(len(eigen_pair)):
-    #     W.append(eigen_pair[i][1])
-    W = EigenVector
-    # W = np.asarray(W)
+    W = []
+    for i in range(len(eigen_pair)):
+        W.append(eigen_pair[i][1])
+    # W = EigenVector
+    W = np.asarray(W)
     print("Original Shape:", x_data.shape)
     x_data = ProjectedData(x_data, W)
     print("Projected Shape:", x_data.shape)

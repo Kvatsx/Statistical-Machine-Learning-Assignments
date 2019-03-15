@@ -7,21 +7,21 @@ from helper import *
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 # In[] ----------------------------------------
-# X_Data, Y_Data = ReadData_1Q1()
-X_Train, Y_Train, X_Test, Y_Test = ReadData_2Q1()
+X_Data, Y_Data = ReadData_1Q1()
+# X_Train, Y_Train, X_Test, Y_Test = ReadData_2Q1()
 # print(X_Data.shape)
 # print(Y_Data.shape)
 # # print("Data:", X_Data.shape, Y_Data.shape)
 # # # print(X_Data)
-# X_Train, Y_Train, X_Test, Y_Test = SplitData(X_Data, Y_Data, 70)
+X_Train, Y_Train, X_Test, Y_Test = SplitData(X_Data, Y_Data, 70)
 # GaussianClassifier(X_Train, Y_Train, X_Test, Y_Test)
 
 # # X_Train, Y_Train, X_Test, Y_Test = SplitData(X_Data, Y_Data, 70)
-# print(X_Train.shape, X_Test.shape)
-# np.save("Q1_Data\X_Train.npy", X_Train)
-# np.save("Q1_Data\Y_Train.npy", Y_Train)
-# np.save("Q1_Data\X_Test.npy", X_Test)
-# np.save("Q1_Data\Y_Test.npy", Y_Test)
+print(X_Train.shape, X_Test.shape)
+np.save("Q1_Data\X_Train.npy", X_Train)
+np.save("Q1_Data\Y_Train.npy", Y_Train)
+np.save("Q1_Data\X_Test.npy", X_Test)
+np.save("Q1_Data\Y_Test.npy", Y_Test)
 
 # In[]
 # Load Data ----------------------------------------------
@@ -40,8 +40,9 @@ print("[PCA] Projected Data", X2_Train.shape, X2_Test.shape)
 GaussianClassifier(X2_Train, Y_Train, X2_Test, Y_Test)
 
 # # LDA ---------------------------------------------------
-X3_Train, X3_Test = LDA(X_Train, Y_Train, X_Test, [0, 10])
-# print("[LDA] Projected Data", X3_Train.shape, X3_Test.shape, [1, 12])
+# X3_Train, X3_Test = LDA(X_Train, Y_Train, X_Test, [0, 10])    # Q2
+X3_Train, X3_Test = LDA(X_Train, Y_Train, X_Test, [1, 12]) # Q1
+# print("[LDA] Projected Data", X3_Train.shape, X3_Test.shape)
 print("[LDA] Projected Data", X3_Train.shape, X3_Test.shape)
 GaussianClassifier(X3_Train, Y_Train, X3_Test, Y_Test)
 
