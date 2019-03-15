@@ -10,8 +10,11 @@ from random import randint as randi
 from sklearn.tree import DecisionTreeClassifier
 import csv
 import matplotlib.pyplot as plt
+import pickle
+from sklearn.metrics import confusion_matrix
+import itertools
 
-def ReadData1():
+def ReadData_1Q1():
     imageList = []
     imageLabels = []
     for i in range(1, 12):
@@ -27,6 +30,61 @@ def ReadData1():
     # print(imageList.shape)
     imageLabels = np.asarray(imageLabels)
     return imageList, imageLabels
+
+def ReadData_2Q1():
+    data = []
+    label = []
+    for i in range(1, 6):
+        with open(".\\Q1_dataset\\cifar-10-batches-py\\data_batch_" + str(i), 'rb') as fo:
+            dict = pickle.load(fo, encoding='bytes')
+            # print(dict)
+            # for key in dict:
+            #     print(key)
+            # print(dict[b'data'].shape)
+            data.append(dict[b'data'])
+            label.append(dict[b'labels'])
+            
+            # break
+    for i in range(1, len(data)):
+        np.concatenate((data[0], data[i]), axis = 0)
+        np.concatenate((label[0], label[i]), axis = 0)
+
+    test = []
+    test_label = []
+    with open(".\\Q1_dataset\\cifar-10-batches-py\\test_batch", 'rb') as fo:
+        dict = pickle.load(fo, encoding='bytes')
+        test.append(dict[b'data'])
+        test_label.append(dict[b'labels'])
+
+    return np.asarray(data[0]), np.asarray(label[0]), np.asarray(test[0]), np.asarray(test_label[0])
+
+def ConfusionMatrix(actual, predicted, filename):
+        classes = np.unique(predicted)
+        # print("classes:", classes)
+        cnf_matrix = confusion_matrix(actual, predicted)
+        np.set_printoptions(precision=2)
+        plt.figure()
+        plt.imshow(cnf_matrix, interpolation='nearest', cmap=plt.cm.Blues)
+        plt.title("Confusion Matrix")
+        plt.colorbar()
+        tick_marks = np.arange(len(classes))
+        plt.xticks(tick_marks, classes, rotation=45)
+        plt.yticks(tick_marks, classes)
+
+        fmt = 'd'
+        thresh = cnf_matrix.max() / 2.
+        for i, j in itertools.product(range(cnf_matrix.shape[0]), range(cnf_matrix.shape[1])):
+            plt.text(j, i, format(cnf_matrix[i, j], fmt),
+                    horizontalalignment="center",
+                    color="white" if cnf_matrix[i, j] > thresh else "black")
+
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label')
+        plt.tight_layout()
+        plt.savefig(filename)
+        plt.show()
+
+# def RocCurve():
 
 def ReadDataQ2():
     data = []
@@ -71,6 +129,7 @@ def SplitData(X_Data, Y_Data, amount):
     return np.asarray(TrainingData), np.asarray(TrainingLabel), np.asarray(TestingData), np.asarray(TestingLabels)
 
 def GaussianClassifier(x_train, y_train, x_test, y_test):
+    print("Gaussian Classifier-------------------------------------")
     clf = GaussianNB()
     clf.fit(x_train, y_train)
 
@@ -81,6 +140,7 @@ def GaussianClassifier(x_train, y_train, x_test, y_test):
         if (y_train[i] == Predicted[i]):
             count1 += 1
     print("Accuracy[Train]:", (count1/len(y_train))*100)
+    ConfusionMatrix(y_train, Predicted, "Q1_data/x_train.png")
 
     Predicted = clf.predict(x_test)
     count2 = 0
@@ -89,7 +149,7 @@ def GaussianClassifier(x_train, y_train, x_test, y_test):
         if (y_test[i] == Predicted[i]):
             count2 += 1
     print("Accuracy[Test]:", (count2/len(y_test))*100) 
-
+    ConfusionMatrix(y_test, Predicted, "Q1_data/x_test.png")
     return (count2/len(y_test))*100
 
 def DTClassifier(x_train, y_train, x_test, y_test):
@@ -115,6 +175,7 @@ def DTClassifier(x_train, y_train, x_test, y_test):
     return (count2/len(y_test))*100
 
 def PCA(x_data, x_test, ee):
+    print("PCA -------------------------------------")
     # Data Normalization
     x_data = NormalizeData(x_data)
     # print("NEW DATA\n", NX_Train)
@@ -124,7 +185,7 @@ def PCA(x_data, x_test, ee):
     # print("EigenVal:", EigenVal.shape)
     # print("EigenVec:", EigenVec.shape)
 
-    ProjectionMatrix = EigenValueProjection(EigenVal, EigenVec, ee)
+    ProjectionMatrix = EigenValueProjection(EigenVal, EigenVec, ee, x_data.shape[1])
     # print (ProjectionMatrix)
     # NX_Train = ProjectedData(X_Train, ProjectionMatrix)
     # NX_Test = ProjectedData(X_Test, ProjectionMatrix)
@@ -133,7 +194,7 @@ def PCA(x_data, x_test, ee):
     return x_data, x_test
 
 def NormalizeData(data):
-    mean = np.mean(data, axis=0, keepdims=True)
+    mean = np.mean(data, axis=0)
     # print(mean)
     new_data = data - mean
     return new_data
@@ -148,12 +209,11 @@ def EigenValueDecomposition(data):
     # print (EigenVector)
     return EigenValues, EigenVector
 
-def EigenValueProjection(eigen_val, eigen_vector, ee):
+def EigenValueProjection(eigen_val, eigen_vector, ee, feature_count):
     eigen_pair = []
-    TotalEigenVal = 0
+    TotalEigenVal = np.sum(eigen_val)
     for i in range(len(eigen_val)):
         eigen_pair.append((eigen_val[i], eigen_vector[:, i]))
-        TotalEigenVal += eigen_val[i]
     eigen_pair.sort(key=lambda k: k[0], reverse=True)
     # print(eigen_pair[0][1].shape)
     total_ee = 0
@@ -168,10 +228,26 @@ def EigenValueProjection(eigen_val, eigen_vector, ee):
             total_ee += eigen_pair[i][0]
             W.append(eigen_pair[i][1])
             break
-    # print(W[0].shape)
+    print(W[0].shape)
+    # per = np.zeros(len(eigen_pair))
+    # for i in range(len(eigen_pair)):
+    #     per[i] = eigen_pair[i][0]*100/TotalEigenVal
+    # cum_per = np.cumsum(per)
+    # print(cum_per)
+    # index = 0
+    # for i in range(len(eigen_pair)):
+    #     if (cum_per[i] > ee):
+    #         index = i+1
+    #         break
+
+    # W = eigen_pair[0][1].reshape(feature_count, 1)
+    # for i in range(1, index):
+    #     W = np.hstack((W, eigen_pair[i][1].reshape(feature_count, 1)))
+
+
     W = np.asarray(W)
-    # print("Printing Projection Matrix")
-    # print(W.shape)
+    print("Printing Projection Matrix")
+    print(W.shape)
     # print(W[0])
     return W
 
@@ -180,9 +256,10 @@ def ProjectedData(x_data, projected_matrix):
     return result
 
 # http://goelhardik.github.io/2016/10/04/fishers-lda/
-def LDA(x_data, y_data, x_test):
-    Sb = BetweenClassScatter(x_data, y_data, [1, 12])
-    Sw = WithinClassScatter(x_data, y_data, [1, 12])
+def LDA(x_data, y_data, x_test, classRange):
+    print("Running LDA --------------------------------------")
+    Sb = BetweenClassScatter(x_data, y_data, classRange)
+    Sw = WithinClassScatter(x_data, y_data, classRange)
 
     M = np.matmul(la.pinv(Sw), Sb)
     # CovarienceMatrix = np.cov(M.T)
