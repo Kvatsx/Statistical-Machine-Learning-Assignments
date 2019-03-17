@@ -10,6 +10,7 @@ from random import randint as randi
 from sklearn.tree import DecisionTreeClassifier
 import csv
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import pickle
 from sklearn.metrics import confusion_matrix, roc_curve
 import itertools
@@ -52,7 +53,23 @@ def ReadData_2Q1():
         test.append(dict[b'data'])
         test_label.append(dict[b'labels'])
 
-    return np.asarray(data[0]), np.asarray(label[0]), np.asarray(test[0]), np.asarray(test_label[0])
+    data = np.asarray(data[0])
+    label = np.asarray(label[0])
+    test = np.asarray(test[0])
+    test_label = np.asarray(test_label[0])
+    print(data.shape)
+    print(test.shape)
+    # data = RGB2Gray(data, 32)
+    # test = RGB2Gray(test, 32)
+    return data, label, test, test_label 
+
+def RGB2Gray(data, dim):
+    new_data = np.zeros((data.shape[0], dim*dim), dtype=np.uint8)
+    for i in range(data.shape[0]):
+        for j in range(dim*dim):
+            new_data[i, j] = data[i, j] * 0.299 + data[i, j + dim*dim] * 0.587 + data[i, j + dim*dim*2] * 0.114
+    print(new_data.shape)
+    return new_data
 
 def confusion_matr1x(y_test, predicted):
     ConfusionMatrix = np.zeros((y_test.shape[0], np.unique(y_test)))
@@ -99,7 +116,7 @@ def RocNew(y_test, CalProb, classCount, imagename):
             for j in range(y_test.shape[0]):
                 classify = False
                 # print()
-                if ( CalProb[j, i] >= threshold ):
+                if ( CalProb[j, i] > threshold ):
                     classify = True
                 if classify and y_test[j] == i:
                     tp += 1
@@ -115,18 +132,17 @@ def RocNew(y_test, CalProb, classCount, imagename):
             threshold *= 0.4
             # print("TPR:", tp/(tp+fn), "FPR:", fp/(tn+fp))
         # print(threshold)
-    clas = np.unique(y_test)
-    plot_Roc(roc_values, classCount, imagename, clas)
+    plot_Roc(roc_values, classCount, imagename)
 
-def plot_Roc(roc_values, classCount, imagename, clas):
+def plot_Roc(roc_values, classCount, imagename):
     plt.figure()
     color = ['b', 'g', 'r', 'c', 'm', 'y', 'k', '#940445', '#42c4d3', '#ff7256', '#8aa0ae']  
     for i in range(classCount):
         # fpr, tpr,  = roc_curve(y_test, CalProb[:, i])
         # plt.plot(tpr, fpr, color[i], label="ROC Curve for class %d" %i)
-        if i in clas:
-            print(i)
-            plt.plot(roc_values[i, 1, :], roc_values[i, 0, :], color[i], label="ROC Curve for class %d" %i)
+        # print(i)
+        plt.plot(roc_values[i, 1, :], roc_values[i, 0, :], color[i], label="ROC Curve for class %d" %i)
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
     plt.xlabel("False Positive Rate")
     plt.ylabel("True Positive Rate")
     plt.title("ROC Curve")
@@ -177,7 +193,7 @@ def SplitData(X_Data, Y_Data, amount):
     print("NewSizes:", len(TrainingData), len(TestingData))
     return np.asarray(TrainingData), np.asarray(TrainingLabel), np.asarray(TestingData), np.asarray(TestingLabels)
 
-def GaussianClassifier(x_train, y_train, x_test, y_test, filename0="Q1_Data/cm.png", filename1="Q1_Data/RocCurve.png"):
+def GaussianClassifier(x_train, y_train, x_test, y_test, plot = False, filename0="Q1_Data/cm.png", filename1="Q1_Data/RocCurve.png"):
     print("Gaussian Classifier-------------------------------------")
     clf = GaussianNB()
     clf.fit(x_train, y_train)
@@ -199,8 +215,9 @@ def GaussianClassifier(x_train, y_train, x_test, y_test, filename0="Q1_Data/cm.p
         if (y_test[i] == Predicted[i]):
             count2 += 1
     print("Accuracy[Test]:", (count2/len(y_test))*100) 
-    ConfusionMatrix(y_test, Predicted, filename0)
-    RocNew(y_test, CalProb, np.unique(y_test).shape[0], filename1)
+    if plot:
+        ConfusionMatrix(y_test, Predicted, filename0)
+        RocNew(y_test, CalProb, np.unique(y_test).shape[0], filename1)
     return (count2/len(y_test))*100
 
 def DTClassifier(x_train, y_train, x_test, y_test):
@@ -242,7 +259,7 @@ def PCA(x_data, x_test, ee):
     # NX_Test = ProjectedData(X_Test, ProjectionMatrix)
     x_data = ProjectedData(x_data, ProjectionMatrix)
     x_test = ProjectedData(x_test, ProjectionMatrix)
-    return x_data, x_test
+    return x_data, x_test, ProjectionMatrix
 
 def NormalizeData(data):
     mean = np.mean(data, axis=0)
@@ -297,12 +314,14 @@ def EigenValueProjection(eigen_val, eigen_vector, ee, feature_count):
 
 
     W = np.asarray(W)
-    print("Printing Projection Matrix")
-    print(W.shape)
+    # print("Printing Projection Matrix")
+    # print(W.shape)
     # print(W[0])
     return W
 
 def ProjectedData(x_data, projected_matrix):
+    # print(x_data.shape)
+    # print(projected_matrix.shape)
     result = np.matmul(x_data, projected_matrix.T)
     return result
 
@@ -405,7 +424,7 @@ def NFold(N, x_train, y_train, x_test, y_test):
     AllBins.append(np.asarray(Bin))
     AllLabelBins.append(np.asarray(LabelBin))
 
-    return AllBins, AllLabelBins
+    return np.asarray(AllBins), np.asarray(AllLabelBins)
 
 
 def getAlpha(error):
@@ -420,6 +439,8 @@ def AdaBoost(n, x_train, y_train, x_test, y_test):
     TestPredicted = np.zeros((x_test.shape[0], 26), dtype=np.float64)
     ErrorListTrain = []
     ErrorListTest = []
+    AccListTrain = []
+    AccListTest = []
 
     for i in range(n):
         # print("Weights", w)
@@ -464,17 +485,22 @@ def AdaBoost(n, x_train, y_train, x_test, y_test):
         Acc2, err2 = GetResults(predicted_labels_test, y_test)
         ErrorListTrain.append(err1)
         ErrorListTest.append(err2)
+        AccListTrain.append(Acc1/100)
+        AccListTest.append(Acc2/100)
 
     predicted_labels_train = np.argmax(TrainPredicted, axis=1)
     predicted_labels_test = np.argmax(TestPredicted, axis=1)
     Acc1, err1 = GetResults(predicted_labels_train, y_train)
     Acc2, err2 = GetResults(predicted_labels_test, y_test)
     
+    # print("AccListTest:", AccListTest)
+    plotAccuracy(AccListTest, np.arange(len(AccListTest)), AccListTrain)
     plotError(ErrorListTrain, np.arange(len(ErrorListTrain)), ErrorListTest)
     print("[AdaBoost Train] Accuracy:", Acc1)
     print("[AdaBoost Test] Accuracy:", Acc2)
+    return predicted_labels_train, predicted_labels_test, (Acc1, Acc2), (err1, err2)
 
-def plotError(x_train, y, x_test):
+def plotError(x_train, y, x_test, name="Q2_Data/AdaBoost_ErrorCurve.png"):
     plt.figure()
     plt.plot(y, x_train, label="Training Error Curve")
     plt.plot(y, x_test, label="Testing Error Curve")
@@ -482,7 +508,20 @@ def plotError(x_train, y, x_test):
     plt.xlabel("Iterations")
     plt.title("Error Rate vs Iterations")
     plt.legend(loc='upper right')
-    plt.savefig("Q2_Data/AdaBoost_ErrorCurve.png")
+    plt.savefig(name)
+    plt.close()
+
+def plotAccuracy(x_test, y, x_train=None, name="Q2_Data/AdaBoost_AccuracyCurve.png"):
+    plt.figure()
+    if x_train != None:
+        plt.plot(y, x_train, label="Train Accuracy Curve")
+    plt.plot(y, x_test, label="Test Accuracy Curve")
+    plt.ylabel("Accuracy Rate")
+    plt.xlabel("Iterations")
+    plt.title("Accuracy Rate vs Iterations")
+    plt.legend(loc='best')
+    plt.savefig(name)
+    plt.close()
 
 def GetResults(PredictedLabels, ActualLabels):
     correct = 0
@@ -519,9 +558,9 @@ def Bagging(n, x_train, y_train, x_test, y_test):
     # print(BagsX.shape) 
 
     # TrainPredicted = np.zeros((x_train.shape[0], 26), dtype=np.int)
-    TestPredicted = np.zeros((x_test.shape[0], 26), dtype=np.int)
+    TestPredicted = np.zeros((x_test.shape[0], 26))
     # ErrorListTrain = []
-    # ErrorListTest = []
+    ErrorListTest = []
     clf = DecisionTreeClassifier(max_depth=2, max_leaf_nodes=5)
     for i in range(n):
         # print(BagsX[i])
@@ -536,11 +575,13 @@ def Bagging(n, x_train, y_train, x_test, y_test):
 
         Pred_Test = clf.predict(x_test)
         # Acc_test = clf.score(x_test, y_test)
-        # Test_Probs = clf.predict_proba(x_test)
+        Test_Probs = clf.predict_proba(x_test)
+        # Test_Probs = ZScoreNormalization(Test_Probs)
+        # Test_Probs = TanhNormalization(Test_Probs)
+        # Test_Probs = minmaxNormalization(Test_Probs)
 
         # TrainPredicted += Train_Probs
-        # TestPredicted += Test_Probs
-
+        TestPredicted += Test_Probs
         # print("[Bagging Train] Accuracy:" + str(i), Acc_train)
         # print("[Bagging Test] Accuracy:" + str(i), Acc_test)
         # for k in range(len(DataMemory[i])):
@@ -548,15 +589,15 @@ def Bagging(n, x_train, y_train, x_test, y_test):
         #     index = DataMemory[i][k]
         #     TrainPredicted[index, Pred_Train[k]] += 1
         
-        for j in range(x_test.shape[0]):
-            TestPredicted[j, Pred_Test[j]] += 1
+        # for j in range(x_test.shape[0]):
+        #     TestPredicted[j, Pred_Test[j]] += 1
 
         # predicted_labels_train = np.argmax(TrainPredicted, axis=1)
-        # predicted_labels_test = np.argmax(TestPredicted, axis=1)
+        predicted_labels_test = np.argmax(TestPredicted, axis=1)
         # Acc1, err1 = GetResults(predicted_labels_train, y_train)
-        # Acc2, err2 = GetResults(predicted_labels_test, y_test)
+        Acc2, err2 = GetResults(predicted_labels_test, y_test)
         # ErrorListTrain.append(err1)
-        # ErrorListTest.append(err2)
+        ErrorListTest.append(err2)
         # break
     # print(TestPredicted)
     # predicted_labels_train = np.argmax(TrainPredicted, axis=1)
@@ -564,12 +605,159 @@ def Bagging(n, x_train, y_train, x_test, y_test):
     # print(predicted_labels_test.shape)
     # Acc1, err1 = GetResults(predicted_labels_train, y_train)
     Acc2, err2 = GetResults(predicted_labels_test, y_test)
+    plotErrorBagging(np.arange(len(ErrorListTest)), ErrorListTest)
     # print("[Bagging Train] Accuracy:", Acc1)
     print("[Bagging Test] Accuracy:", Acc2)
+    return predicted_labels_test, (Acc2, err2)
 
+def plotErrorBagging(y, x_test):
+    plt.figure()
+    plt.plot(y, x_test, label="Testing Error Curve")
+    plt.ylabel("Error Rate")
+    plt.xlabel("Iterations")
+    plt.title("Error Rate vs Iterations")
+    plt.legend(loc='upper right')
+    plt.savefig("Q2_Data/AdaBoost_ErrorCurve.png")
+    plt.close()
 
-# def ReconstructImages(eigenFaces):
+def NFoldCrossValidation(x_train_bin, y_train_bin, x3_test, y_test):
+    # Accuracy_Train = []
+    Accuracy_Test = []
+    Accuracy_Original = []
+    for i in range(len(x_train_bin)):
+        new_x_train = []
+        new_y_train = []
+        new_x_test = []
+        new_y_test = []
+        for j in range(len(x_train_bin)):
+            if i != j:
+                for k in range(len(x_train_bin[j])):
+                    new_x_train.append(x_train_bin[j][k])
+                    new_y_train.append(y_train_bin[j][k])
+        
+        new_x_train = np.asarray(new_x_train)
+        new_y_train = np.asarray(new_y_train)
+        new_x_test = x_train_bin[i]
+        new_y_test = y_train_bin[i]
 
+        # acc1 = GaussianClassifier(new_x_train, new_y_train, new_x_train, new_y_train)
+        acc2 = GaussianClassifier(new_x_train, new_y_train, new_x_test, new_y_test)
+        acc3 = GaussianClassifier(new_x_train, new_y_train, x3_test, y_test, True, "Q1_Data/CM"+str(i)+".png", "Q1_Data/Roc"+str(i)+".png")
+        # Accuracy_Train.append(acc1)
+        Accuracy_Test.append(acc2)
+        Accuracy_Original.append(acc3)
+        # print(new_x_train)
+        # print(new_x_train.shape)        
+        # print(new_x_test.shape)
 
-# def VisualizeEigenFaces():
+    # print(Accuracy_Train)
+    print(Accuracy_Test)
+    print(Accuracy_Original)
 
+    # print("[KFold] Train:", np.amax(Accuracy_Train))
+    print("[KFold] Test:", np.amax(Accuracy_Test))
+    print("[KFold] test mean:", np.mean(Accuracy_Test))
+    print("[KFold] test std:", np.std(Accuracy_Test))
+
+    print("[KFold] Original Test:", np.amax(Accuracy_Original))
+    print("[KFold] mean Test:", np.mean(Accuracy_Original))
+    print("[KFold] std Test:", np.std(Accuracy_Original))
+
+def ReconstructImages(eigenFaces):
+    FaceImages = []
+    for i in range(eigenFaces.shape[0]):
+        FaceImages.append(eigenFaces[i].reshape(32, 32))
+    FaceImages = np.asarray(FaceImages)
+    print(FaceImages[0].shape)
+    return FaceImages
+
+def VisualizeEigenFaces(FaceImages):
+    plt.figure(figsize=(17,int(ceil(FaceImages.shape[0]/17))))
+    for i in range(FaceImages.shape[0]):
+        plt.subplot(int(ceil(FaceImages.shape[0]/17)), 17, i + 1)
+        # img = cv2.cvtColor(FaceImages[i].astype(np.uint8), cv2.COLOR_BGR2GRAY)
+        plt.imshow(FaceImages[i])
+        # plt.imshow(FaceImages[i].astype(np.uint8))
+        plt.xticks(())
+        plt.yticks(())
+    # plt.show()
+    plt.savefig("Q1_Data/EigenFaces.png")
+
+def NFoldCrossValidationEnsemble(x_train_bin, y_train_bin, x3_test, y_test, Ens = True, Bag = False):
+    # Accuracy_Train = []
+    Accuracy_Test = []
+    Accuracy_Original = []
+    for i in range(len(x_train_bin)):
+        new_x_train = []
+        new_y_train = []
+        new_x_test = []
+        new_y_test = []
+        for j in range(len(x_train_bin)):
+            if i != j:
+                for k in range(len(x_train_bin[j])):
+                    new_x_train.append(x_train_bin[j][k])
+                    new_y_train.append(y_train_bin[j][k])
+        
+        new_x_train = np.asarray(new_x_train)
+        new_y_train = np.asarray(new_y_train)
+        new_x_test = x_train_bin[i]
+        new_y_test = y_train_bin[i]
+
+        # acc1 = GaussianClassifier(new_x_train, new_y_train, new_x_train, new_y_train)
+        if Ens and not Bag:
+            _, _, acc2, _ = AdaBoost(180, new_x_train, new_y_train, new_x_test, new_y_test)
+            _, _, acc3, _ = AdaBoost(180, new_x_train, new_y_train, x3_test, y_test)
+            acc2 = acc2[1]
+            acc3 = acc3[1]
+        else:
+            _, acc2 = Bagging(180, new_x_train, new_y_train, new_x_test, new_y_test)
+            _, acc3 = Bagging(180, new_x_train, new_y_train, x3_test, y_test)
+            acc2 = acc2[0]
+            acc3 = acc3[0]
+
+        # acc2 = GaussianClassifier(new_x_train, new_y_train, new_x_test, new_y_test)
+        # acc3 = GaussianClassifier(new_x_train, new_y_train, x3_test, y_test, True, "Q1_Data/CM"+str(i)+".png", "Q1_Data/Roc"+str(i)+".png")
+        # Accuracy_Train.append(acc1)
+        Accuracy_Test.append(acc2)
+        Accuracy_Original.append(acc3)
+        # print(new_x_train)
+        # print(new_x_train.shape)        
+        # print(new_x_test.shape)
+
+    # print(Accuracy_Train)
+    print(Accuracy_Test)
+    print(Accuracy_Original)
+
+    # print("[KFold] Train:", np.amax(Accuracy_Train))
+    print("[KFold] Test:", np.amax(Accuracy_Test))
+    print("[KFold] test mean:", np.mean(Accuracy_Test))
+    print("[KFold] test std:", np.std(Accuracy_Test))
+
+    print("[KFold] Original Test:", np.amax(Accuracy_Original))
+    print("[KFold] mean Test:", np.mean(Accuracy_Original))
+    print("[KFold] std Test:", np.std(Accuracy_Original))
+
+def ZScoreNormalization(Prob):
+    mean_value = np.mean(Prob, axis=1)
+    std_dev = np.std(Prob, axis=1)
+    Result = np.zeros(Prob.shape)
+    for i in range(Prob.shape[0]):
+        Result[i] = (Prob[i] - mean_value[i]) / std_dev[i] 
+    return Result
+
+def minmaxNormalization(Prob):
+    Min = np.min(Prob, axis=1)
+    Max = np.max(Prob, axis=1)
+    Result = np.zeros(Prob.shape)
+    for i in range(Prob.shape[0]):
+        Result[i] = (Prob[i] - Min[i])/(Max[i] - Min[i])
+    return Result
+
+def TanhNormalization(Prob):
+    mean_value = np.mean(Prob, axis=1)
+    std_dev = np.std(Prob, axis=1)
+    Result = np.zeros(Prob.shape)
+    for i in range(Prob.shape[0]):
+        Result[i] = 0.01 * ((Prob[i] - mean_value[i]) / std_dev[i] )
+        Result[i] = 0.5 * (np.tanh(Result[i]) + 1)
+    return Result

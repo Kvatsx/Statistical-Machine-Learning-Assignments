@@ -4,7 +4,7 @@
 import numpy as np
 from numpy import linalg as la
 from helper import *
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+# from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 
 # ----------------------------------------
 # X_Data, Y_Data = ReadData_1Q1()
@@ -32,18 +32,25 @@ Y_Test = np.load("Q1_Data\Y_Test.npy")
 # print("Original Data:", X_Train.shape, X_Test.shape)
 
 # GaussianClassifier(X_Train, Y_Train, X_Test, Y_Test)
-
+# print(np.unique(Y_Test))
 # # PCA ---------------------------------------------------
-# X2_Train, X2_Test = PCA(X_Train, X_Test, 95)
+X2_Train, X2_Test, W = PCA(X_Train, X_Test, 99)
 # print("[PCA] Projected Data", X2_Train.shape, X2_Test.shape)
 # GaussianClassifier(X2_Train, Y_Train, X2_Test, Y_Test)
+# print(W[0].shape)
+# FaceImages = ReconstructImages(W)
+# VisualizeEigenFaces(FaceImages)
 
 # # LDA ---------------------------------------------------
-# X3_Train, X3_Test = LDA(X_Train, Y_Train, X_Test, [0, 10])    # Q2
-X3_Train, X3_Test = LDA(X_Train, Y_Train, X_Test, [0, 11]) # Q1
+X3_Train, X3_Test = LDA(X_Train, Y_Train, X_Test, [0, 10])    # Q2
+# X3_Train, X3_Test = LDA(X_Train, Y_Train, X_Test, [0, 11]) # Q1
+# X2_Train, X2_Test, W = PCA(X3_Train, X3_Test, 99)
+
 # print("[LDA] Projected Data", X3_Train.shape, X3_Test.shape)
 # print("[LDA] Projected Data", X3_Train.shape, X3_Test.shape)
-GaussianClassifier(X3_Train, Y_Train, X3_Test, Y_Test)
+# GaussianClassifier(X3_Train, Y_Train, X3_Test, Y_Test)
+GaussianClassifier(X_Train, Y_Train, X_Test, Y_Test)
+
 
 # # Inbuilt LDA ---------------------------------------------------
 # clf = LinearDiscriminantAnalysis()
@@ -61,52 +68,15 @@ GaussianClassifier(X3_Train, Y_Train, X3_Test, Y_Test)
 # X_Train_Bins, Y_Train_Bins = NFold(5, X2_Train, Y_Train, X2_Test, Y_Test)
 # X_Train_Bins, Y_Train_Bins = NFold(5, X3_Train, Y_Train, X3_Test, Y_Test)
 
-X_Train_Bins, Y_Train_Bins = NFold(5, X3_Train, Y_Train, X3_Test, Y_Test)
+# X_Train_Bins, Y_Train_Bins = NFold(5, X3_Train, Y_Train, X3_Test, Y_Test)
+# np.save("Q1_Data\X_Train_Bins_pca.npy", X_Train_Bins)
+# np.save("Q1_Data\Y_Train_Bins_pca.npy", Y_Train_Bins)
 # print(len(X_Train_Bins[0]))
-def NFoldCrossValidation(x_train_bin, y_train_bin):
-    Accuracy_Train = []
-    Accuracy_Test = []
-    Accuracy_Original = []
-    for i in range(len(x_train_bin)):
-        new_x_train = []
-        new_y_train = []
-        new_x_test = []
-        new_y_test = []
-        for j in range(len(x_train_bin)):
-            if i != j:
-                for k in range(len(x_train_bin[j])):
-                    new_x_train.append(x_train_bin[j][k])
-                    new_y_train.append(y_train_bin[j][k])
-        
-        new_x_train = np.asarray(new_x_train)
-        new_y_train = np.asarray(new_y_train)
-        new_x_test = x_train_bin[i]
-        new_y_test = y_train_bin[i]
 
-        # acc1 = GaussianClassifier(new_x_train, new_y_train, new_x_train, new_y_train)
-        acc2 = GaussianClassifier(new_x_train, new_y_train, new_x_test, new_y_test, "Q1_Data/CM"+str(i)+".png", "Q1_Data/Roc"+str(i)+".png")
-        acc3 = GaussianClassifier(new_x_train, new_y_train, X3_Test, Y_Test)
-        # Accuracy_Train.append(acc1)
-        Accuracy_Test.append(acc2)
-        Accuracy_Original.append(acc3)
-        # print(new_x_train)
-        # print(new_x_train.shape)        
-        # print(new_x_test.shape)
+# X_Train_Bins = np.load("Q1_Data\X_Train_Bins.npy")
+# Y_Train_Bins = np.load("Q1_Data\Y_Train_Bins.npy")
 
-    # print(Accuracy_Train)
-    print(Accuracy_Test)
-    print(Accuracy_Original)
-
-    # print("[KFold] Train:", np.amax(Accuracy_Train))
-    print("[KFold] Test:", np.amax(Accuracy_Test))
-    print("[KFold] test mean:", np.mean(Accuracy_Test))
-    print("[KFold] test std:", np.std(Accuracy_Test))
-
-    print("[KFold] Original Test:", np.amax(Accuracy_Original))
-    print("[KFold] mean Test:", np.mean(Accuracy_Original))
-    print("[KFold] std Test:", np.std(Accuracy_Original))
-
-NFoldCrossValidation(X_Train_Bins, Y_Train_Bins)
+# NFoldCrossValidation(X_Train_Bins, Y_Train_Bins, X2_Test, Y_Test)
 
 # 
 
