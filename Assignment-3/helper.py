@@ -43,8 +43,8 @@ def ReadData_2Q1():
             label.append(dict[b'labels'])
 
     for i in range(1, len(data)):
-        np.concatenate((data[0], data[i]), axis = 0)
-        np.concatenate((label[0], label[i]), axis = 0)
+        data[0] = np.concatenate((data[0], data[i]), axis = 0)
+        label[0] = np.concatenate((label[0], label[i]), axis = 0)
 
     test = []
     test_label = []
@@ -59,8 +59,8 @@ def ReadData_2Q1():
     test_label = np.asarray(test_label[0])
     print(data.shape)
     print(test.shape)
-    # data = RGB2Gray(data, 32)
-    # test = RGB2Gray(test, 32)
+    data = RGB2Gray(data, 32)
+    test = RGB2Gray(test, 32)
     return data, label, test, test_label 
 
 def RGB2Gray(data, dim):
