@@ -16,6 +16,9 @@ import seaborn as sns
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from skimage.feature import hog
+from sklearn.model_selection import GridSearchCV
+from sklearn.decomposition import PCA
+from sklearn.neural_network import MLPClassifier
 
 # Read Data ----------------------------------------------------
 X_Data, Y_Data = ReadData(color=1)
@@ -93,13 +96,16 @@ print("Data Saved!")
 # Feature Extraction ---------------------------------------------
 
 def SiftFeatures(x_train, y_train):
+    # orb = cv2.ORB_create()
     sift = cv2.xfeatures2d.SIFT_create()
     features = []
     nx_train = []
     ny_train = []
     for i in range(x_train.shape[0]):
         image = np.reshape(x_train[i], (64, 64, 3))
+        # image = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
         _, des = sift.detectAndCompute(image, None)
+        # _, des = orb.detectAndCompute(image, None)
         if des is None:
             continue
         for d in des:
@@ -130,7 +136,7 @@ def getHisto(x_data):
     hds = []
     for i in range(x_data.shape[0]):
         img = np.reshape(x_data[i], (64, 64, 3))
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         his = cv2.calcHist([img],[0],None,[256],[0,256])
         # print(his.shape)
         # break
@@ -145,8 +151,9 @@ def getHisto(x_data):
 def getHOG(x_data):
     hds = []
     for i in range(x_data.shape[0]):
-        img = np.reshape(x_data[i], (64, 64, 3))
-        fd, hog_image = hog(img, orientations=4, pixels_per_cell=(8, 8), cells_per_block=(1, 1), visualize=True, multichannel=True, block_norm="L2-Hys")
+        img = np.reshape(x_data[i], (64, 64))
+        # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        fd, hog_image = hog(img, orientations=9, pixels_per_cell=(4, 4), cells_per_block=(1, 1), visualize=True, block_norm="L2-Hys")
         hds.append(fd)
         cv2.imwrite("./BonusData/Visualize_Train/img_"+str(i)+".png", hog_image)
     hds = np.asarray(hds)
@@ -174,10 +181,51 @@ def getHOG(x_data):
 #     # Accuracy = clf.score(NX_Test, NY_Test)
 #     # print("Accuracy:", Accuracy)
 
-# X_Train = getHisto(X_Train)
-# NX_Test = getHisto(NX_Test)
+# X_Train_1 = getHisto(X_Train)
+# NX_Test_1 = getHisto(NX_Test)
 # X_Train = getHOG(X_Train)
 # NX_Test = getHOG(NX_Test)
+X_Train = getHisto(X_Data)
+Y_Train = Y_Data
+NX_Test, names = ReadTestData(color=1)
+NX_Test = PreProcessing(NX_Test)
+NX_Test = getHisto(NX_Test)
+
+# np.save("./BonusData/X_Train.npy", X_Train_1)
+# np.save("./BonusData/Y_Train.npy", NX_Test_1)
+# np.save("./BonusData/X_Test.npy", X_Train)
+# np.save("./BonusData/Y_Test.npy", NX_Test)
+
+# print("Data Saved!")
+# X_Train_1 = np.load("./BonusData/X_Train.npy")
+# NX_Test_1 = np.load("./BonusData/Y_Train.npy")
+# X_Train = np.load("./BonusData/X_Test.npy")
+# NX_Test = np.load("./BonusData/Y_Test.npy")
+
+# print("Hog Fe")
+# print(X_Train.shape, X_Train_1.shape)
+
+
+# X_Train = np.hstack((X_Train, X_Train_1))
+# NX_Test = np.hstack((NX_Test, NX_Test_1))
+print(X_Train.shape)
+print(NX_Test.shape)
+
+# pca = PCA()
+# pca.fit(X_Train)
+# X_Train =  pca.transform(X_Train)
+# NX_Test = pca.transform(NX_Test)
+
+# np.save("./BonusData/X_Train.npy", X_Train)
+# np.save("./BonusData/Y_Train.npy", Y_Train)
+# np.save("./BonusData/X_Test.npy", NX_Test)
+# np.save("./BonusData/Y_Test.npy", NY_Test)
+
+# X_Train =  np.load("./BonusData/X_Train.npy")
+# Y_Train = np.load("./BonusData/Y_Train.npy")
+# NY_Train = np.load("./BonusData/X_Test.npy")
+# NY_Test = np.load("./BonusData/Y_Test.npy")
+
 # Accuracy = clf.score(X_Train, Y_Train)
 # print("Accuracy:", Accuracy*100)
 # Accuracy = clf.score(X_Test, Y_Test)
@@ -188,8 +236,9 @@ def getHOG(x_data):
 # X_Train = getHisto(X_Data)
 # Y_Train = Y_Data
 # X_Test = getHisto(X_Test)
+print("----------------HOG Features-----------------------")
 
-print("---------Sift Features-----------------------")
+# print("---------Sift Features-----------------------")
 # size = int(X_Train.shape[0] * 0.5)
 # print(X_Train.shape)
 # X_Train_1 = X_Train[:size]
@@ -204,33 +253,36 @@ print("---------Sift Features-----------------------")
 # print(Y_Train_1.shape)
 # print(Y_Train_2.shape)
 
-size = int(X_Data.shape[0]*0.5)
-X_Data_1 = X_Data[:size]
-X_Data_2 = X_Data[size:]
+# size = int(X_Data.shape[0]*0.5)
+# X_Data_1 = X_Data[:size]
+# X_Data_2 = X_Data[size:]
 
-Y_Data_1 = Y_Data[:size]
-Y_Data_2 = Y_Data[size:]
+# Y_Data_1 = Y_Data[:size]
+# Y_Data_2 = Y_Data[size:]
 
 # X_Train_1, Y_Train_1, Features1 = SiftFeatures(X_Train_1, Y_Train_1)
-X_Train_1, Y_Train_1, Features1 = SiftFeatures(X_Data_1, Y_Data_1)
+# X_Train_1, Y_Train_1, Features1 = SiftFeatures(X_Data_1, Y_Data_1)
 
 
 
 print("------------Clutering Features-----------------")
 
-kmeans = KMeans(n_clusters=50)
-kmeans.fit(Features1)
-pickle.dump(kmeans, open("./BonusData/Kmean.sav", 'wb'))
+# kmeans = KMeans(n_clusters=50)
+# kmeans.fit(Features1)
+# pickle.dump(kmeans, open("./BonusData/Kmean.sav", 'wb'))
 # kmeans = pickle.load(open("./BonusData/Kmean.sav", 'rb'))
 
 # kmeans = pickle.load(open("./BonusData/Kmean.sav", 'rb'))
 def Bovw(kmeans, x_data, y_data):
     sift = cv2.xfeatures2d.SIFT_create()
+    # orb = cv2.ORB_create()
     Features = []
     Y_data = []
     for i in range(x_data.shape[0]):
         image = np.reshape(x_data[i], (64, 64, 3))
         histogram = np.zeros(len(kmeans.cluster_centers_))
+        # image = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
+        # kp, des = orb.detectAndCompute(image, None)
         kp, des = sift.detectAndCompute(image, None)
         # if des is None:
         #     continue
@@ -250,44 +302,47 @@ def Bovw(kmeans, x_data, y_data):
 # X_Train, Y_Train = Bovw(kmeans, X_Train_2, Y_Train_2)
 # NX_Test, NY_Test = Bovw(kmeans, NX_Test, NY_Test)
 
-X_Train, Y_Train = Bovw(kmeans, X_Data_2, Y_Data_2)
+# X_Train, Y_Train = Bovw(kmeans, X_Data_2, Y_Data_2)
 
-X_Test, names = ReadTestData()
-X_Test = PreProcessing(X_Test)
-NX_Test, names = Bovw(kmeans, X_Test, names)
+# X_Test, names = ReadTestData()
+# X_Test = PreProcessing(X_Test)
+# NX_Test, names = Bovw(kmeans, X_Test, names)
 
 print("------------Training Classifier-----------------")
 
-print(X_Train.shape, Y_Train.shape)
-clf = svm.SVC(gamma='auto')
-clf.fit(X_Train, Y_Train)
+# print(X_Train.shape, Y_Train.shape)
+# svc = svm.SVC(gamma='auto')
+# parameters = {'kernel':('linear', 'rbf'), 'C':[1, 10]}
+# clf = GridSearchCV(svc, parameters, cv=5)
+
+# clf.fit(X_Train, Y_Train)
 # pickle.dump(clf, open("./BonusData/Svm.sav", 'wb'))
 # clf = pickle.load(open("./BonusData/Svm.sav", 'rb'))
 
 print("-------------Training Complete------------------")
 
 # NX_Test, NY_Test, _ = ExtractFeatures(X_Test, Y_Test)
-Accuracy = clf.score(X_Train, Y_Train)
-print("Accuracy[Train]:", Accuracy*100)
+# Accuracy = clf.score(X_Train, Y_Train)
+# print("Accuracy[Train]:", Accuracy*100)
 # Accuracy = clf.score(NX_Test, NY_Test)
 # print("Accuracy[Test]:", Accuracy*100)
-labels = clf.predict(NX_Test)
-WriteCsv("2016048_kaustav_submission1.csv", names, labels)
+# labels = clf.predict(NX_Test)
+# WriteCsv("2016048_kaustav_submission1.csv", names, labels)
 
 
-clf = RandomForestClassifier(n_estimators=1000, random_state=0)
+clf = RandomForestClassifier(n_estimators=1200, random_state=0)
 clf.fit(X_Train, Y_Train)
 Accuracy = clf.score(X_Train, Y_Train)
 print("[RFC]Accuracy[Train]:", Accuracy*100)
 # labels = clf.predict(X_Test)
 
 labels = clf.predict(NX_Test)
-WriteCsv("2016048_kaustav_submission2.csv", names, labels)
+# WriteCsv("2016048_kaustav_submission2.csv", names, labels)
 
 # np.save("./BonusData/labels.npy", labels)
 # labels = np.load("./BonusData/labels.npy")
 # print(names)
-# WriteCsv("2016048_kaustav_submission.csv", names, labels)
+WriteCsv("2016048_kaustav_submission.csv", names, labels)
 # Accuracy = clf.score(NX_Test, NY_Test)
 # print("[RFC]Accuracy[Test]:", Accuracy*100)
 
@@ -306,3 +361,12 @@ WriteCsv("2016048_kaustav_submission2.csv", names, labels)
 # print("[KNN]Accuracy[Train]:", Accuracy*100)
 # Accuracy = clf.score(NX_Test, NY_Test)
 # print("[KNN]Accuracy[Test]:", Accuracy*100)
+
+
+# clf = MLPClassifier(max_iter=600000)
+# clf.fit(X_Train, Y_Train)
+# Accuracy = clf.score(X_Train, Y_Train)
+# print("[RFC]Accuracy[Train]:", Accuracy*100)
+# labels = clf.predict(NX_Test)
+# WriteCsv("2016048_kaustav_submission.csv", names, labels)
+
