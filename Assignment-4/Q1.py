@@ -37,6 +37,13 @@ class NeuralNetwork:
             self.W.append(np.random.randn(prev, now)/np.sqrt(now))
             self.B.append(np.random.randn(1, now)/np.sqrt(now))
             prev = now
+        self.W = np.asarray(self.W)
+        self.B = np.asarray(self.B)
+
+    def Convert2OneHotEncoding(self, y_data):
+        result = np.zeros((y_data.shape[0], np.unique(y_data).shape[0]))
+        result[np.arange(y_data.shape[0], y_data)] = 1
+        return result
 
     def Sigmoid(self, z):
         ret = 1/(1 + np.exp(-z))
@@ -63,22 +70,26 @@ class NeuralNetwork:
             z = np.dot(Activation, self.W[i]) + self.B[i]
             A = self.Sigmoid(z)
             self.A.append(A)
+        self.A = np.asarray(self.A)
 
     '''Updating weights of all neurons after training'''
-    def BackPropogation(self, y_data, output):
-        self.E = y_data - output
-        # self.
+    def BackPropogation(self, y_data):
+        self.E = self.A - y_data
+        
+        
 
     def saveModel(self):
-        for i in range(self.LayersCount):
-            np.save("./Data/W{}.npy".format(i), self.W[i])
-            np.save("./Data/B{}.npy".format(i), self.B[i])        
+        np.save("./Data/W.npy", self.W)
+        np.save("./Data/B.npy", self.B)
 
+    def loadModel(self):
+        self.W = np.load("./Data/W.npy")
+        self.B = np.load("./Data/B.npy")
 
 
 if __name__ == "__main__":
     '''Reading Mnist Dataset'''
     X_Train, Y_Train, X_Test, Y_Test = ReadData(verbose=True)
     print("------------------------------------------------")
-
-    NN = NeuralNetwork(X_Train.shape[0], [256, 128, 64])
+    # Pass Layers including the output layer
+    NN = NeuralNetwork(X_Train.shape[0], [256, 128, 64, 10])
