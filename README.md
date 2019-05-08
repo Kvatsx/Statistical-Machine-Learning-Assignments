@@ -2,7 +2,7 @@
 
 > Reports of all assignment are available in ./Report directory
 
-# Note:- Everything in assignments is implemented from scratch except some of the classifiers.
+### Note:- Everything in assignments is implemented from scratch except some of the classifiers.
 
 ## Assignment-1
 * **Classification** on **FMNIST Dataset**. 
